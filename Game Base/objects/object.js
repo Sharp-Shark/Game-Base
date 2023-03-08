@@ -3,7 +3,7 @@ class object {
     constructor (x=0, y=0, a=0) {
         this.objType = 'object';
         this.index = len(objects);
-        this.id = len(objects);
+        this.id = idHighest++;
         this.x = x;
         this.y = y;
         this.a = a;
@@ -26,7 +26,7 @@ class object {
     };
     die () {
         // Destroy Self
-        objectIndexesToRemove.push(this.id);
+        objectIndexesToRemove.push(this.index);
     };
     myIntersection () {
         // Returns the Intersection (X) this Object is in

@@ -14,6 +14,7 @@ class slider extends element {
         this.txtSize = txtSize;
         this.txtAlign = txtAlign;
         this.clickable = 1;
+        this.padding = 0;
         
         this.data = {};
 
@@ -48,12 +49,12 @@ class slider extends element {
         // Render Background
         ctx.beginPath();
         ctx.fillStyle = this.color;
-        ctx.rect(this.x - this.width/2, this.y - this.height/2, this.width, this.height);
+        ctx.rect(this.x - (this.width + this.padding)/2, this.y - (this.height + this.padding)/2, this.width + this.padding, this.height + this.padding);
         ctx.fill();
         if(this.clicked || (this.isMouseOver() && actionType == 'none')) {
             ctx.beginPath();
             ctx.fillStyle = 'rgb(255, 255, 255, 0.1)';
-            ctx.rect(this.x - this.width/2, this.y - this.height/2, this.width, this.height);
+            ctx.rect(this.x - (this.width + this.padding)/2, this.y - (this.height + this.padding)/2, this.width + this.padding, this.height + this.padding);
             ctx.fill();
             if(this.clicked) {
                 ctx.fill();

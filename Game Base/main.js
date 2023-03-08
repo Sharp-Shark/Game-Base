@@ -17,27 +17,6 @@ function range (start, end) {
 function len(array) {
     return array.length;
 };
-function tutorialPopup () {
-    window.alert(`
-    || Welcome to Game -- Bem Vindo a Jogo ||
-    WASD to Move Camera -- WASD para Mover a Camera
-    Space to Pause -- Espaço para Pausar
-    Mouse to Grab -- Mouse para Segurar
-    Q and E to Zoom -- Q e E para Zoom
-    Z to Remove All -- Z para Remover Tudo
-    X to Delete Selected -- X para Deletar Selecionado
-    C to Copy Selected -- C para Copiar Selecionado
-    V to Paste Copy -- V para Colar Copia
-    B to Reset Camera -- B para Resetar a Camera
-    N for continuous Slider -- N para Slider Continuo
-    T to Control/Spectate -- T para Controlar/Espectar
-    1 to Spawn Object -- 1 para Spawnar Objeto
-    2 to Spawn Player -- 2 para SpawnarJogador
-    H for Help Menu -- H para Menu de Ajuda
-    J to Toggle Cheats -- J para Ativar/Desativar Trapaças
-    0 for Fullscreen -- 0 para Tela Cheia
-    `);
-};
 
 // Geometry and Math functions
 function sort (array) {
@@ -162,12 +141,14 @@ let dishShape = !1?'circle':'square';
 let dishSize = 400;
 let dishThickness = dishSize/20;
 // Objects
+let objectIdIndex = {};
 let objectIndexesToRemove = [];
 let objectsToPush = [];
 let objects = [];
 let oldObjects = [];
 let toRender = [];
 let intersections = [];
+let idHighest = 0;
 // Elements
 let elements = [];
 // Settings
@@ -239,6 +220,13 @@ function report () {
 };
 
 // Misc Functions
+function updateObjectIdIndex () {
+    objectIdIndex = {};
+    for(let countObject in objects) {
+        objects[countObject].index = parseInt(countObject);
+        objectIdIndex[objects[countObject].id] = objects[countObject].index;
+    };
+};
 function resetSelected () {
     // Reset Selection Vars
     actionType = 'none';
@@ -270,6 +258,11 @@ function findElement (label) {
 
 // Main Loop Function
 function main (time) {
+    // Keep FPS at ~75
+    if(time - lastTime <= 12) {
+        requestAnimationFrame(main);
+        return;
+    };
     // FPS and Delta Time
     if(windowWasOutOfFocus) {
         timeScale /= timeScaleMult;
@@ -285,14 +278,15 @@ function main (time) {
     };
     // Debug Clear
     debug = '';
-    // If Selected Stack Doesn't Exist, Unselect
-    if(selected > len(objects)-1) {resetSelected();};
+    // If Selected Object Doesn't Exist, Unselect
+    if(selected != -1 && objects[objectIdIndex[selected]] == undefined) {resetSelected();};
+    if(cam.target != -1 && objects[objectIdIndex[cam.target]] == undefined) {cam.target = -1;};
     // Camera targetting
     if(cam.target != -1) {
         // Smoothly follow target
-        cam.x += (objects[cam.target].x - cam.x) / 20;
-        cam.y += (objects[cam.target].y - cam.y) / 20;
-        cam.zoom += (100/objects[cam.target].size/lerp((objects[cam.target].velX**2 + objects[cam.target].velY**2)**0.5/200, 1, 4) - cam.zoom) / 20;
+        cam.x += (objects[objectIdIndex[cam.target]].x - cam.x) / 20;
+        cam.y += (objects[objectIdIndex[cam.target]].y - cam.y) / 20;
+        cam.zoom += (100/objects[objectIdIndex[cam.target]].size/lerp((objects[objectIdIndex[cam.target]].velX**2 + objects[objectIdIndex[cam.target]].velY**2)**0.5/200, 1, 4) - cam.zoom) / 20;
     };
     // Mouse Position Translated into World Position
     worldMouse.x = camToX(mouse.x);
@@ -341,12 +335,9 @@ function main (time) {
     // Actions
     if(mouseState && actionType == 'none') {
         if(closestObjectToMouseId != -1) {
-            objects.sort(function(a, b) {
-                return a.id - b.id;
-            });
             selected = closestObjectToMouseId;
-            mouse.offsetX = worldMouse.x - objects[selected].x;
-            mouse.offsetY = worldMouse.y - objects[selected].y;
+            mouse.offsetX = worldMouse.x - objects[objectIdIndex[selected]].x;
+            mouse.offsetY = worldMouse.y - objects[objectIdIndex[selected]].y;
             actionType = 'grab';
         } else {
             if(cam.target == -1) {
@@ -354,30 +345,28 @@ function main (time) {
             };
         };
     } else if(actionType == 'grab' && cheats) {
-        objects.sort(function(a, b) {
-            return a.id - b.id;
-        });
-        objects[selected].size = Math.max(Math.min(objects[selected].size+(isKeyDown('f')-isKeyDown('g'))*2, dishSize*0.8), 10);
-        let d = distance([0, 0], [mouse.offsetX, mouse.offsetY]) - objects[selected].size;
+
+        objects[objectIdIndex[selected]].size = Math.max(Math.min(objects[objectIdIndex[selected]].size+(isKeyDown('f')-isKeyDown('g'))*2, dishSize*0.8), 10);
+        let d = distance([0, 0], [mouse.offsetX, mouse.offsetY]) - objects[objectIdIndex[selected]].size;
         if(d > 0) {
             mouse.offsetX -= Math.cos(pointTowards([0, 0], [mouse.offsetY, mouse.offsetX])) * d;
             mouse.offsetY -= Math.sin(pointTowards([0, 0], [mouse.offsetY, mouse.offsetX])) * d;
         };
-        objects[selected].x += (worldMouse.x - mouse.offsetX - objects[selected].x)/10;
-        objects[selected].y += (worldMouse.y - mouse.offsetY - objects[selected].y)/10;
+        objects[objectIdIndex[selected]].x += (worldMouse.x - mouse.offsetX - objects[objectIdIndex[selected]].x)/10;
+        objects[objectIdIndex[selected]].y += (worldMouse.y - mouse.offsetY - objects[objectIdIndex[selected]].y)/10;
         if(paused) {
-            objects[selected].oldX = objects[selected].x;
-            objects[selected].oldY = objects[selected].y;
+            objects[objectIdIndex[selected]].oldX = objects[objectIdIndex[selected]].x;
+            objects[objectIdIndex[selected]].oldY = objects[objectIdIndex[selected]].y;
         };
-        if(objects[selected].size <= 0) {
-            objects[selected].die();
+        if(objects[objectIdIndex[selected]].size <= 0) {
+            objects[objectIdIndex[selected]].die();
         };
     } else if(actionType == 'flick') {
-        objects[selected].velX = 0;
-        objects[selected].velY = 0;
+        objects[objectIdIndex[selected]].velX = 0;
+        objects[objectIdIndex[selected]].velY = 0;
         if(!isKeyDown('n')) {
-            objects[selected].velX += (objects[selected].x - worldMouse.x)/5;
-            objects[selected].velY += (objects[selected].y - worldMouse.y)/5;
+            objects[objectIdIndex[selected]].velX += (objects[objectIdIndex[selected]].x - worldMouse.x)/5;
+            objects[objectIdIndex[selected]].velY += (objects[objectIdIndex[selected]].y - worldMouse.y)/5;
             actionType = 'wait';
             selected = -1;
         };
@@ -398,9 +387,7 @@ function main (time) {
     objects.sort(function(a, b) {
         return a.x - b.x;
     });
-    for(let countObject in objects) {
-        objects[countObject].index = parseInt(countObject);
-    }; 
+    updateObjectIdIndex();
     oldObjects = structuredClone(objects);
     let leftMost = 0;
     let rightMost = 0;
@@ -444,10 +431,6 @@ function main (time) {
     for(let countObject in objects) {
         if(!paused) {objects[countObject].physicsEnd();};
     };
-    // Sort Objects by ID
-    objects.sort(function(a, b) {
-        return a.id - b.id;
-    });
     // Non-Physics Related Logic
     for(let countObject in objects) {
         if(!paused) {
@@ -472,15 +455,6 @@ function main (time) {
             toRender[countLayer][countObject].render();
         };
     };
-
-    // Sort Objects by ID
-    objects.sort(function(a, b) {
-        return a.id - b.id;
-    });
-    for(let countObject in objects) {
-        objects[countObject].index = parseInt(countObject);
-    };
-
     // Objects to Remove
     while(len(objectIndexesToRemove) > 0) {
         // Update Other Object's ID
@@ -490,17 +464,6 @@ function main (time) {
         };
         if(cam.target == objects[objectIndexesToRemove[0]].id) {
             cam.target = -1;
-        };
-        for(let countObject in objects) {
-            if(objects[countObject].id > objects[objectIndexesToRemove[0]].id) {
-                objects[countObject].id -= 1;
-            };
-        };
-        if(selected > objects[objectIndexesToRemove[0]].id) {
-            selected -= 1;
-        };
-        if(cam.target > objects[objectIndexesToRemove[0]].id) {
-            cam.target -= 1;
         };
         for(let objectIndexToRemoveCount in objectIndexesToRemove) {
             if(objectIndexesToRemove[objectIndexToRemoveCount] > objectIndexesToRemove[0]) {
@@ -512,6 +475,7 @@ function main (time) {
         // "Increment" "Counter"
         objectIndexesToRemove.shift()
     };
+    updateObjectIdIndex();
 
     // World Border
     if(dishShape == 'circle') {
@@ -532,7 +496,7 @@ function main (time) {
         ctx.beginPath();
         ctx.strokeStyle = 'black';
         ctx.lineWidth = 5;
-        ctx.arc(xToCam(objects[selected].x), yToCam(objects[selected].y), objects[selected].size*cam.zoom+5, 0, Math.PI*2);
+        ctx.arc(xToCam(objects[objectIdIndex[selected]].x), yToCam(objects[objectIdIndex[selected]].y), objects[objectIdIndex[selected]].size*cam.zoom+5, 0, Math.PI*2);
         ctx.stroke();
     } else if(actionType == 'flick') {
         ctx.lineJoin = 'round';
@@ -540,7 +504,7 @@ function main (time) {
         ctx.lineWidth = 10*cam.zoom;
         ctx.strokeStyle = 'rgb(0, 0, 0, 0.5)';
         ctx.beginPath();
-        ctx.moveTo(xToCam(objects[selected].x), yToCam(objects[selected].y))
+        ctx.moveTo(xToCam(objects[objectIdIndex[selected]].x), yToCam(objects[objectIdIndex[selected]].y))
         ctx.lineTo(mouse.x, mouse.y);
         ctx.stroke();
         ctx.lineJoin = 'miter';
@@ -558,7 +522,7 @@ function main (time) {
         ctx.lineWidth = 8;
         for(let i = 0; i < 30; i++) {
             ctx.beginPath();
-            ctx.arc(xToCam(objects[cam.target].x), yToCam(objects[cam.target].y), objects[cam.target].size*cam.zoom+8, Math.PI/8*i-Math.PI/32, Math.PI/8*i+Math.PI/32);
+            ctx.arc(xToCam(objects[objectIdIndex[cam.target]].x), yToCam(objects[objectIdIndex[cam.target]].y), objects[objectIdIndex[cam.target]].size*cam.zoom+8, Math.PI/8*i-Math.PI/32, Math.PI/8*i+Math.PI/32);
             ctx.stroke();
         };
     };
@@ -573,11 +537,11 @@ function main (time) {
     // Show Info about Selected Object
     if(selected != -1) {
         // Info for Objects
-        ctx.fillText('Type '+objects[selected].objType, xToCam(objects[selected].x+objects[selected].size+10), yToCam(objects[selected].y+(25*-0.25)));
-        ctx.fillText('Size '+Math.round(objects[selected].size*10)/10, xToCam(objects[selected].x+objects[selected].size+10), yToCam(objects[selected].y+(25*0.75)));
+        ctx.fillText('Type '+objects[objectIdIndex[selected]].objType, xToCam(objects[objectIdIndex[selected]].x+objects[objectIdIndex[selected]].size+10), yToCam(objects[objectIdIndex[selected]].y+(25*-0.25)));
+        ctx.fillText('Size '+Math.round(objects[objectIdIndex[selected]].size*10)/10, xToCam(objects[objectIdIndex[selected]].x+objects[objectIdIndex[selected]].size+10), yToCam(objects[objectIdIndex[selected]].y+(25*0.75)));
     };
     // Display Copied Object
-    if(copyPaste != -1 && (isKeyDown('c') || isKeyDown('v'))) {
+    if(copyPaste != -1 && (isKeyDown('c') || isKeyDown('v')) && cheats) {
         // Set copyPaste Pos to Mouse Po
         copyPaste.x = worldMouse.x;
         copyPaste.y = worldMouse.y;
@@ -600,15 +564,35 @@ function main (time) {
     ctx.fillText(paused?'PAUSED':'', screenWidth/2, screenHeight/2);
 
     // Update Text from GUI Element "info"
-    elements[findElement('info')].x = elements[findElement('info')].width/2;
-    elements[findElement('info')].y = elements[findElement('info')].height/2;
+    elements[findElement('info')].x = 10 + elements[findElement('info')].width/2;
+    elements[findElement('info')].y = 10 + elements[findElement('info')].height/2;
     elements[findElement('info')].txt[1] = noSweepNPrune?'Unoptimized':'Sweep&Prune';
     elements[findElement('info')].txt[2] = cheats?'Cheats On':'No Cheats';
     elements[findElement('info')].txt[3] = actionType;
     elements[findElement('info')].txt[4] = Math.round(FPS_average);
-    elements[findElement('info')].height = paused?210:130;
+    elements[findElement('info')].height = paused?180:130;
     elements[findElement('mapSize')].hide = !paused;
     dishSize = lerp(elements[findElement('mapSize')].slidePos, elements[findElement('mapSize')].slideMin, elements[findElement('mapSize')].slideMax);
+
+    elements[findElement('helpEng')].hide = elements[findElement('help')].hide;
+    elements[findElement('helpPTBR')].hide = elements[findElement('help')].hide;
+    if(!elements[findElement('help')].hide) {
+        // Help Bg
+        elements[findElement('help')].x = screenWidth/2;
+        elements[findElement('help')].y = screenHeight/2;
+        elements[findElement('help')].width = screenWidth - 10;
+        elements[findElement('help')].height = screenHeight - 10;
+        // Help English
+        elements[findElement('helpEng')].x = screenWidth * 1/4;
+        elements[findElement('helpEng')].y = screenHeight/2;
+        elements[findElement('helpEng')].width = screenWidth/2;
+        elements[findElement('helpEng')].height = screenHeight;
+        // Help2 PT-BR
+        elements[findElement('helpPTBR')].x = screenWidth * 3/4;
+        elements[findElement('helpPTBR')].y = screenHeight/2;
+        elements[findElement('helpPTBR')].width = screenWidth/2;
+        elements[findElement('helpPTBR')].height = screenHeight;
+    };
 
     for(let countElement in elements) {
         elements[countElement].tick();
@@ -621,8 +605,14 @@ function main (time) {
     screenHeight = screen.height;
 
     report();
+    if(isKeyDown('r')) {
+        objects.push(new object(15, 15));
+        objects[len(objects)-1].size = 75;
+    };
 
-    if(continueMainLoop) {requestAnimationFrame(main);};
+    if(continueMainLoop) {
+        requestAnimationFrame(main);
+    };
 };
 
 // User Input
@@ -649,14 +639,13 @@ window.addEventListener('keydown', (event) => {
         objects = [];
     };
     if(event.key == 'x' && selected != -1 && !isKeyDown('x') && cheats) {
-        objects[selected].die();
+        objects[objectIdIndex[selected]].die();
     };
     if(event.key == 'c' && selected != -1 && !isKeyDown('c') && cheats) {
-        copyPaste = objects[selected].clone();
+        copyPaste = objects[objectIdIndex[selected]].clone();
     };
     if(event.key == 'v' && copyPaste != -1 && !isKeyDown('v') && cheats) {
         copyPaste.index = len(objects)-1;
-        copyPaste.id = len(objects);
         copyPaste.x = worldMouse.x;
         copyPaste.y = worldMouse.y;
         copyPaste.oldX = copyPaste.x;
@@ -677,7 +666,7 @@ window.addEventListener('keydown', (event) => {
         actionType = 'flick';
     };
     if(event.key == 'h' && !isKeyDown('h')) {
-        tutorialPopup();
+        elements[findElement('help')].hide = !elements[findElement('help')].hide;
     };
     if(event.key == '0' && !isKeyDown('0') && cheats) {
         HTMLconsoleVisible = !HTMLconsoleVisible;
@@ -686,10 +675,12 @@ window.addEventListener('keydown', (event) => {
     if(event.key == 'j' && !isKeyDown('j')) {
         cheats = !cheats;
     };
-    if(event.key == 't' && cheats) {
-        cam.target = selected;
-        if(cam.target != -1) {
-            actionType = 'wait';
+    if(event.key == 't' && !isKeyDown('t') && cheats) {
+        
+        if(cam.target == closestObjectToMouseId) {
+            cam.target = -1;
+        } else {
+            cam.target = closestObjectToMouseId;
         };
     };
     // Update kbKeys
@@ -758,23 +749,89 @@ window.addEventListener("visibilitychange", (event) => {
 });
 
 // Info Button Element
-elements.push(new button('info', 0, 0, 280, 130));
+elements.push(new button('info', 10, 10, 280, 130));
 elements[len(elements)-1].color = 'rgb(200, 200, 200, 0.5)';
 elements[len(elements)-1].align = 'topleft';
 elements[len(elements)-1].txt = ['Click for Help Menu', 'Sweep&Prune', 'Cheats On', 'none', 0];
 elements[len(elements)-1].txtAlign = 'left';
+elements[len(elements)-1].padding = 20;
 elements[len(elements)-1].onClick = function () {
-    tutorialPopup();
+    //tutorialPopup();
+    elements[findElement('help')].hide = !elements[findElement('help')].hide;
 };
 
 // Size Slider Element
-elements.push(new slider('mapSize', 250/2 + 15, 170, 250, 25));
+elements.push(new slider('mapSize', 265/2 + 15, 170, 265, 25));
 elements[len(elements)-1].align = 'abovecenter';
 elements[len(elements)-1].txt = ['Map Size'];
 elements[len(elements)-1].slideMin = 200;
 elements[len(elements)-1].slideMax = 800;
 elements[len(elements)-1].slidePos = invLerp(dishSize, elements[len(elements)-1].slideMin, elements[len(elements)-1].slideMax);
 elements[len(elements)-1].setSnapInterval(25);
+
+// Help Element
+elements.push(new element('help', screenWidth/2, screenHeight/2, screenWidth, screenHeight));
+elements[len(elements)-1].color = 'black';
+elements[len(elements)-1].txtColor = 'white';
+elements[len(elements)-1].txt = [];
+elements[len(elements)-1].clickable = true;
+elements[len(elements)-1].hide = true;
+elements[len(elements)-1].padding = 20;
+elements[len(elements)-1].onClick = function () {
+    this.hide = true;
+};
+
+// Help Engish Element
+elements.push(new element('helpEng', screenWidth * 1/4, screenHeight/2, screenWidth/2, screenHeight));
+elements[len(elements)-1].color = 'rgb(0, 0 , 0, 0)';
+elements[len(elements)-1].txtColor = 'white';
+elements[len(elements)-1].align = 'centerright';
+elements[len(elements)-1].txtAlign = 'right';
+elements[len(elements)-1].txt = [
+'|| Welcome to Game -',
+'WASD to Move Camera -',
+'Space to Pause -',
+'Mouse to Grab -',
+'Q and E to Zoom -',
+'Z to Remove All -',
+'X to Delete Selected -',
+'C to Copy Selected -',
+'V to Paste Copy -',
+'B to Reset Camera -',
+'N for continuous Slider -',
+'T to Control/Spectate -',
+'1 to Spawn Object -',
+'2 to Spawn Player -',
+'H for Help Menu -',
+'J to Toggle Cheats -',
+'0 for Fullscreen -'
+];
+
+// Help PT-BR Element
+elements.push(new element('helpPTBR', screenWidth * 3/4, screenHeight/2, screenWidth/2, screenHeight));
+elements[len(elements)-1].color = 'rgb(0, 0 , 0, 0)';
+elements[len(elements)-1].txtColor = 'white';
+elements[len(elements)-1].align = 'centerleft';
+elements[len(elements)-1].txtAlign = 'left';
+elements[len(elements)-1].txt = [
+'- Bem Vindo a Jogo ||',
+'- WASD para Mover a Camera',
+'- Espaço para Pausar',
+'- Mouse para Segurar',
+'- Q e E para Zoom',
+'- Z para Remover Tudo',
+'- X para Deletar Selecionado',
+'- C para Copiar Selecionado',
+'- V para Colar Copia',
+'- B para Resetar a Camera',
+'- N para Slider Continuo',
+'- T para Controlar/Espectar',
+'- 1 para Spawnar Objeto',
+'- 2 para SpawnarJogador',
+'- H para Menu de Ajuda',
+'- J para Ativar/Desativar Trapaças',
+'- 0 para Tela Cheia'
+];
 
 // Pre-Loop
 resizeCanvas();
@@ -795,7 +852,7 @@ if(!cheats) {
 
     objects.push(new player(-15, -15));
 
-    tutorialPopup();
+    elements[findElement('help')].hide = false;
 };
 
 // Loop

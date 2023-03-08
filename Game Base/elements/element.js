@@ -14,6 +14,7 @@ class element {
         this.txtSize = txtSize;
         this.txtAlign = txtAlign;
         this.clickable = 0;
+        this.padding = 0;
         
         this.data = {};
 
@@ -49,7 +50,7 @@ class element {
         // Render Background
         ctx.beginPath();
         ctx.fillStyle = this.color;
-        ctx.rect(this.x - this.width/2, this.y - this.height/2, this.width, this.height);
+        ctx.rect(this.x - (this.width + this.padding)/2, this.y - (this.height + this.padding)/2, this.width + this.padding, this.height + this.padding);
         ctx.fill();
     };
     renderTxt () {
@@ -63,6 +64,12 @@ class element {
         let txtY = this.y;
         if(this.align == 'center') {
             txtX = this.x;
+            txtY = this.y - len(this.txt) * this.txtSize/2 + this.txtSize*0.8;
+        } else if(this.align == 'centerleft') {
+            txtX = this.x - this.width/2;
+            txtY = this.y - len(this.txt) * this.txtSize/2 + this.txtSize*0.8;
+        } else if(this.align == 'centerright') {
+            txtX = this.x + this.width/2;
             txtY = this.y - len(this.txt) * this.txtSize/2 + this.txtSize*0.8;
         } else if(this.align == 'topleft') {
             txtX = this.x - this.width/2;

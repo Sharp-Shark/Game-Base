@@ -4,7 +4,7 @@ class player extends object {
         super(object);
         this.objType = 'player';
         this.index = len(objects);
-        this.id = len(objects);
+        this.id = idHighest++;
         this.x = x;
         this.y = y;
         this.a = a;
@@ -17,6 +17,12 @@ class player extends object {
         this.size = 35;
         this.layers = [1, 1];
         this.zIndex = 0;
+    };
+    clone () {
+        let toReturn = new player;
+        toReturn.a = this.a;
+        toReturn.oldA = this.oldA;
+        return toReturn;
     };
     physicsStart () {
         // Inherited from Object parent class
@@ -67,9 +73,6 @@ class player extends object {
         };
     };
     process () {
-        if(!cheats && (cam.target == -1 || objects[cam.target].objType != 'player')) {
-            cam.target = this.id;
-        };
     };
     render () {
         circle(xToCam(this.x), yToCam(this.y), this.size*cam.zoom, 'rgb(200, 100, 100, 1.0)');
