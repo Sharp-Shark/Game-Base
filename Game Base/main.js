@@ -620,6 +620,7 @@ window.addEventListener('click', (event) => {
 });
 
 window.addEventListener('contextmenu', (event) => {
+    paused = !paused;
 });
 
 window.addEventListener('keypress', (event) => {
@@ -710,6 +711,8 @@ window.addEventListener('mousemove', (event) => {
 });
 
 window.addEventListener('mousedown', (event) => {
+    if(event.button != 0) {return;};
+
     mouseState = 1;
     // Iterate over Elements in Reverse Order
     for(let countElement in elements) {
@@ -725,6 +728,8 @@ window.addEventListener('mousedown', (event) => {
 });
 
 window.addEventListener('mouseup', (event) => {
+    if(event.button != 0) {return;};
+
     mouseState = 0;
     resetSelected();
     // Iterate over Elements
