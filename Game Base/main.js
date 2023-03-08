@@ -838,7 +838,7 @@ resizeCanvas();
 HTMLconsoleVisible = !true;
 
 // Setup world
-cheats = true;
+cheats = !true;
 
 if(!cheats) {
     objects.push(new object(15, 15));
@@ -851,6 +851,9 @@ if(!cheats) {
     objects[len(objects)-1].size = 25;
 
     objects.push(new player(-15, -15));
+
+    cam.target = objects[len(objects)-1].id;
+    updateObjectIdIndex();
 
     elements[findElement('help')].hide = false;
 };
