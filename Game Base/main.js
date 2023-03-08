@@ -838,7 +838,7 @@ resizeCanvas();
 HTMLconsoleVisible = !true;
 
 // Setup world
-cheats = !true;
+cheats = true;
 
 if(!cheats) {
     objects.push(new object(15, 15));
